@@ -11,8 +11,16 @@ const viewToken = document.querySelector("#view-token");
 const viewTemp = document.querySelector("#view-temp");
 const topPSlider = document.querySelector("#top-p");
 const topPValue = document.querySelector("#top-p-value");
+const topKSlider = document.querySelector("#top-k");
+const topKValue = document.querySelector("#top-k-value");
+const stepTokensSlider = document.querySelector("#step-tokens");
+const stepTokensValue = document.querySelector("#step-tokens-value");
 const topPInfoBtn = document.querySelector("#top-p-info");
 const topPPop = document.querySelector("#top-p-pop");
+const topKInfoBtn = document.querySelector("#top-k-info");
+const topKPop = document.querySelector("#top-k-pop");
+const stepTokensInfoBtn = document.querySelector("#step-tokens-info");
+const stepTokensPop = document.querySelector("#step-tokens-pop");
 const langNnBtn = document.querySelector("#lang-nn");
 const langEnBtn = document.querySelector("#lang-en");
 
@@ -35,6 +43,8 @@ let temperatures = [0.0, 0.4, 0.8, 1.2, 1.6];
 let tempOutputs = temperatures.map(() => "");
 let tempLoading = temperatures.map(() => false);
 let topP = Number(topPSlider.value || 0.9);
+let topK = Number(topKSlider.value || 5);
+let stepTokens = Number(stepTokensSlider.value || 1);
 let currentLang = localStorage.getItem("lang") || "nn";
 
 const i18n = {
@@ -68,6 +78,12 @@ const i18n = {
     insert_token: "Set inn token",
     top_p_help:
       "top_p avgrensar val til dei mest sannsynlege tokena. Lågare = tryggare, høgare = meir tilfeldig.",
+    top_k_help:
+      "top_k styrer kor mange av dei mest sannsynlege tokena som blir viste.",
+    step_tokens_help:
+      "Styrer kor mange token som blir henta per steg i temperatur‑fana.",
+    advanced_label: "Avanserte kontrollar",
+    step_tokens_label: "Token per steg",
   },
   en: {
     title: "Token Predictor 🔮",
@@ -99,6 +115,12 @@ const i18n = {
     insert_token: "Insert token",
     top_p_help:
       "top_p limits choices to the most likely tokens. Lower = safer, higher = more random.",
+    top_k_help:
+      "top_k controls how many of the most likely tokens are shown.",
+    step_tokens_help:
+      "Controls how many tokens are fetched per step in the temperature tab.",
+    advanced_label: "Advanced controls",
+    step_tokens_label: "Tokens per step",
   },
 };
 
@@ -116,6 +138,8 @@ function applyI18n() {
     el.setAttribute("placeholder", t(key));
   });
   topPPop.textContent = t("top_p_help");
+  topKPop.textContent = t("top_k_help");
+  stepTokensPop.textContent = t("step_tokens_help");
   langNnBtn.classList.toggle("active", currentLang === "nn");
   langEnBtn.classList.toggle("active", currentLang === "en");
 }
@@ -293,7 +317,11 @@ async function predict() {
     const res = await fetch("/api/predict", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, top_p: topP }),
+      body: JSON.stringify({
+        prompt,
+        top_p: topP,
+        top_k: topK,
+      }),
     });
     const data = await res.json();
     if (requestId !== inflight) return;
@@ -339,7 +367,12 @@ async function nextTempToken() {
         const res = await fetch("/api/next", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt, temperature: temp, top_p: topP }),
+          body: JSON.stringify({
+            prompt,
+            temperature: temp,
+            top_p: topP,
+            max_tokens: stepTokens,
+          }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -474,6 +507,16 @@ topPSlider.addEventListener("input", () => {
   topPValue.textContent = topP.toFixed(2);
 });
 
+topKSlider.addEventListener("input", () => {
+  topK = Number(topKSlider.value);
+  topKValue.textContent = String(topK);
+});
+
+stepTokensSlider.addEventListener("input", () => {
+  stepTokens = Number(stepTokensSlider.value);
+  stepTokensValue.textContent = String(stepTokens);
+});
+
 langNnBtn.addEventListener("click", () => {
   currentLang = "nn";
   localStorage.setItem("lang", currentLang);
@@ -491,19 +534,46 @@ langEnBtn.addEventListener("click", () => {
 });
 
 topPInfoBtn.addEventListener("click", () => {
+  [topKPop, stepTokensPop].forEach((pop) => {
+    pop.classList.remove("show");
+    pop.setAttribute("aria-hidden", "true");
+  });
   const isOpen = topPPop.classList.toggle("show");
   topPPop.setAttribute("aria-hidden", String(!isOpen));
 });
 
+topKInfoBtn.addEventListener("click", () => {
+  [topPPop, stepTokensPop].forEach((pop) => {
+    pop.classList.remove("show");
+    pop.setAttribute("aria-hidden", "true");
+  });
+  const isOpen = topKPop.classList.toggle("show");
+  topKPop.setAttribute("aria-hidden", String(!isOpen));
+});
+
+stepTokensInfoBtn.addEventListener("click", () => {
+  [topPPop, topKPop].forEach((pop) => {
+    pop.classList.remove("show");
+    pop.setAttribute("aria-hidden", "true");
+  });
+  const isOpen = stepTokensPop.classList.toggle("show");
+  stepTokensPop.setAttribute("aria-hidden", String(!isOpen));
+});
+
 document.addEventListener("click", (event) => {
-  if (
+  const isInfoTarget =
     event.target === topPInfoBtn ||
-    topPPop.contains(event.target)
-  ) {
-    return;
-  }
-  topPPop.classList.remove("show");
-  topPPop.setAttribute("aria-hidden", "true");
+    event.target === topKInfoBtn ||
+    event.target === stepTokensInfoBtn;
+  const isInsidePop =
+    topPPop.contains(event.target) ||
+    topKPop.contains(event.target) ||
+    stepTokensPop.contains(event.target);
+  if (isInfoTarget || isInsidePop) return;
+  [topPPop, topKPop, stepTokensPop].forEach((pop) => {
+    pop.classList.remove("show");
+    pop.setAttribute("aria-hidden", "true");
+  });
 });
 
 document.addEventListener("keydown", (event) => {
@@ -534,3 +604,5 @@ applyI18n();
 setView("token");
 renderTempCards();
 topPValue.textContent = topP.toFixed(2);
+topKValue.textContent = String(topK);
+stepTokensValue.textContent = String(stepTokens);

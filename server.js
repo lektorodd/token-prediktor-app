@@ -30,7 +30,7 @@ app.post("/api/predict", async (req, res) => {
         prompt,
         max_tokens: 1,
         temperature: 0,
-        logprobs: 5,
+        logprobs: Math.max(1, Math.min(15, Number(req.body?.top_k ?? 5))),
         top_p: Number(req.body?.top_p ?? 0.9),
       }),
     });
@@ -74,6 +74,7 @@ app.post("/api/next", async (req, res) => {
 
     const prompt = String(req.body?.prompt ?? "");
     const temperature = Number(req.body?.temperature ?? 0);
+    const maxTokens = Math.max(1, Math.min(5, Number(req.body?.max_tokens ?? 1)));
     if (!prompt.trim()) {
       return res.json({ token: "" });
     }
@@ -87,7 +88,7 @@ app.post("/api/next", async (req, res) => {
       body: JSON.stringify({
         model: "gpt-3.5-turbo-instruct",
         prompt,
-        max_tokens: 1,
+        max_tokens: maxTokens,
         temperature,
         top_p: Number(req.body?.top_p ?? 0.9),
       }),

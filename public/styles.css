@@ -15,10 +15,21 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   color: var(--ink);
-  background: radial-gradient(circle at 20% 20%, #ffffff 0%, #f7f2ff 45%, #efe6ff 100%);
+  background: radial-gradient(
+    circle at 20% 20%,
+    #ffffff 0%,
+    #f7f2ff 45%,
+    #efe6ff 100%
+  );
+  background-attachment: fixed;
 }
 
 .page {
@@ -140,10 +151,16 @@ body {
   background: var(--accent-soft);
 }
 
+.info-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
 .popover {
   position: absolute;
   right: 0;
-  top: 36px;
+  top: 30px;
   max-width: 260px;
   padding: 10px 12px;
   border-radius: 10px;
@@ -157,12 +174,38 @@ body {
   pointer-events: none;
   transform: translateY(-6px);
   transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 10;
 }
 
 .popover.show {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+.advanced {
+  margin-top: 16px;
+}
+
+.advanced summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  list-style: none;
+}
+
+.advanced summary::marker {
+  display: none;
+}
+
+.advanced summary::after {
+  content: "▾";
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.advanced[open] summary::after {
+  content: "▴";
 }
 
 .view.hidden {
@@ -414,6 +457,16 @@ body {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.github-mark {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.github-mark svg {
+  display: block;
 }
 
 @media (max-width: 600px) {
