@@ -13,7 +13,8 @@ const topPSlider = document.querySelector("#top-p");
 const topPValue = document.querySelector("#top-p-value");
 const topPInfoBtn = document.querySelector("#top-p-info");
 const topPPop = document.querySelector("#top-p-pop");
-const langToggleBtn = document.querySelector("#lang-toggle");
+const langNnBtn = document.querySelector("#lang-nn");
+const langEnBtn = document.querySelector("#lang-en");
 
 const tempPromptEl = document.querySelector("#temp-prompt");
 const tempStartBtn = document.querySelector("#temp-start");
@@ -115,10 +116,8 @@ function applyI18n() {
     el.setAttribute("placeholder", t(key));
   });
   topPPop.textContent = t("top_p_help");
-  langToggleBtn.setAttribute(
-    "aria-label",
-    currentLang === "nn" ? "Switch language" : "Byt språk"
-  );
+  langNnBtn.classList.toggle("active", currentLang === "nn");
+  langEnBtn.classList.toggle("active", currentLang === "en");
 }
 
 chartEl.tabIndex = 0;
@@ -475,14 +474,20 @@ topPSlider.addEventListener("input", () => {
   topPValue.textContent = topP.toFixed(2);
 });
 
-langToggleBtn.addEventListener("click", () => {
-  currentLang = currentLang === "nn" ? "en" : "nn";
+langNnBtn.addEventListener("click", () => {
+  currentLang = "nn";
   localStorage.setItem("lang", currentLang);
   applyI18n();
   renderTempCards();
-  if (tokensCache.length) {
-    render(tokensCache);
-  }
+  if (tokensCache.length) render(tokensCache);
+});
+
+langEnBtn.addEventListener("click", () => {
+  currentLang = "en";
+  localStorage.setItem("lang", currentLang);
+  applyI18n();
+  renderTempCards();
+  if (tokensCache.length) render(tokensCache);
 });
 
 topPInfoBtn.addEventListener("click", () => {

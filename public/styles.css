@@ -47,14 +47,26 @@ body {
   gap: 16px;
 }
 
-.lang-btn {
-  border: 1px solid rgba(107, 63, 242, 0.25);
-  background: white;
-  color: var(--ink);
-  padding: 8px 12px;
+.lang-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: #f0eaff;
+  border-radius: 999px;
+}
+
+.lang-pill {
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
   border-radius: 999px;
   cursor: pointer;
   font-weight: 600;
+}
+
+.lang-pill.active {
+  background: var(--accent);
+  color: white;
 }
 
 .tabs {
