@@ -9,6 +9,8 @@
   --accent-soft: #ede6ff;
 }
 
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap");
+
 * {
   box-sizing: border-box;
 }
@@ -36,6 +38,23 @@ body {
 .header p {
   margin: 0;
   color: var(--muted);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lang-btn {
+  border: 1px solid rgba(107, 63, 242, 0.25);
+  background: white;
+  color: var(--ink);
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .tabs {
@@ -359,6 +378,30 @@ body {
   color: var(--muted);
   font-size: 14px;
   margin-top: 12px;
+}
+
+.footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: var(--ink);
+}
+
+.footer-brand {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 @media (max-width: 600px) {

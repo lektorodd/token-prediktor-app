@@ -13,6 +13,7 @@ const topPSlider = document.querySelector("#top-p");
 const topPValue = document.querySelector("#top-p-value");
 const topPInfoBtn = document.querySelector("#top-p-info");
 const topPPop = document.querySelector("#top-p-pop");
+const langToggleBtn = document.querySelector("#lang-toggle");
 
 const tempPromptEl = document.querySelector("#temp-prompt");
 const tempStartBtn = document.querySelector("#temp-start");
@@ -33,6 +34,92 @@ let temperatures = [0.0, 0.4, 0.8, 1.2, 1.6];
 let tempOutputs = temperatures.map(() => "");
 let tempLoading = temperatures.map(() => false);
 let topP = Number(topPSlider.value || 0.9);
+let currentLang = localStorage.getItem("lang") || "nn";
+
+const i18n = {
+  nn: {
+    title: "Tokenspå 🔮",
+    subtitle:
+      "Skriv inn ei setning. Trykk mellomrom for å vise sannsyn for neste token.",
+    tab_token: "Token",
+    tab_temp: "Temperatur",
+    label_text: "Tekst",
+    placeholder_text: "Skriv noko...",
+    btn_start: "Start",
+    btn_stop: "Stopp",
+    btn_restart: "Start på nytt",
+    btn_show_next: "Vis neste token",
+    btn_next_token: "Neste token",
+    btn_update_fields: "Oppdater felt",
+    next_tokens: "Neste token",
+    no_predictions: "Ingen spådomar enno.",
+    field_count: "Tal på felt",
+    temp_header: "Ulike temperaturar",
+    temp_label: "Temperatur",
+    ready: "Klar",
+    thinking: "Tenkjer",
+    pending: "Klar for neste token.",
+    predicting: "Spår…",
+    failed: "Spåing feila.",
+    need_text: "Skriv inn tekst først.",
+    fetching: "Hentar neste token…",
+    fetch_failed: "Kunne ikkje hente token.",
+    insert_token: "Set inn token",
+    top_p_help:
+      "top_p avgrensar val til dei mest sannsynlege tokena. Lågare = tryggare, høgare = meir tilfeldig.",
+  },
+  en: {
+    title: "Token Predictor 🔮",
+    subtitle:
+      "Type a sentence. Press space to see the next-token probabilities.",
+    tab_token: "Token",
+    tab_temp: "Temperature",
+    label_text: "Text",
+    placeholder_text: "Write something...",
+    btn_start: "Start",
+    btn_stop: "Stop",
+    btn_restart: "Restart",
+    btn_show_next: "Show next token",
+    btn_next_token: "Next token",
+    btn_update_fields: "Update fields",
+    next_tokens: "Next tokens",
+    no_predictions: "No predictions yet.",
+    field_count: "Number of fields",
+    temp_header: "Different temperatures",
+    temp_label: "Temperature",
+    ready: "Ready",
+    thinking: "Thinking",
+    pending: "Ready for next token.",
+    predicting: "Predicting…",
+    failed: "Prediction failed.",
+    need_text: "Please enter text first.",
+    fetching: "Fetching next token…",
+    fetch_failed: "Could not fetch token.",
+    insert_token: "Insert token",
+    top_p_help:
+      "top_p limits choices to the most likely tokens. Lower = safer, higher = more random.",
+  },
+};
+
+function t(key) {
+  return i18n[currentLang]?.[key] || i18n.nn[key] || key;
+}
+
+function applyI18n() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    el.textContent = t(key);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    el.setAttribute("placeholder", t(key));
+  });
+  topPPop.textContent = t("top_p_help");
+  langToggleBtn.setAttribute(
+    "aria-label",
+    currentLang === "nn" ? "Switch language" : "Byt språk"
+  );
+}
 
 chartEl.tabIndex = 0;
 
@@ -61,7 +148,7 @@ function renderTempCards() {
     const left = document.createElement("div");
     const label = document.createElement("div");
     label.className = "temp-label";
-    label.textContent = "Temperatur";
+    label.textContent = t("temp_label");
     const value = document.createElement("input");
     value.className = "temp-value";
     value.type = "number";
@@ -81,17 +168,17 @@ function renderTempCards() {
     output.className = "temp-output";
     if (tempLoading[index]) {
       output.classList.add("pending");
-      output.textContent = "Spår…";
+      output.textContent = t("predicting");
     } else if (!tempOutputs[index]) {
       output.classList.add("pending");
-      output.textContent = "Klar for neste token.";
+      output.textContent = t("pending");
     } else {
       output.textContent = tempOutputs[index];
     }
 
     const state = document.createElement("div");
     state.className = "temp-state";
-    state.textContent = tempLoading[index] ? "Tenkjer" : "Klar";
+    state.textContent = tempLoading[index] ? t("thinking") : t("ready");
 
     row.appendChild(left);
     row.appendChild(output);
@@ -118,7 +205,7 @@ function render(tokens) {
     row.setAttribute("role", "button");
     row.setAttribute(
       "aria-label",
-      `Set inn token ${formatToken(token.token)}`
+      `${t("insert_token")} ${formatToken(token.token)}`
     );
 
     const label = document.createElement("div");
@@ -202,7 +289,7 @@ async function predict() {
     return;
   }
   const requestId = ++inflight;
-  setStatus("Spår…");
+  setStatus(t("predicting"));
   try {
     const res = await fetch("/api/predict", {
       method: "POST",
@@ -212,7 +299,7 @@ async function predict() {
     const data = await res.json();
     if (requestId !== inflight) return;
     if (!res.ok) {
-      setStatus("Spåing feila.");
+      setStatus(t("failed"));
       render([]);
       return;
     }
@@ -220,7 +307,7 @@ async function predict() {
     setStatus("");
   } catch (err) {
     if (requestId !== inflight) return;
-    setStatus("Spåing feila.");
+    setStatus(t("failed"));
   }
 }
 
@@ -240,10 +327,10 @@ async function nextTempToken() {
   }
   const basePrompt = tempPromptEl.value;
   if (!basePrompt.trim()) {
-    setTempStatus("Skriv inn tekst først.");
+    setTempStatus(t("need_text"));
     return;
   }
-  setTempStatus("Hentar neste token…");
+  setTempStatus(t("fetching"));
   tempLoading = temperatures.map(() => true);
   renderTempCards();
   try {
@@ -272,7 +359,7 @@ async function nextTempToken() {
   } catch (err) {
     tempLoading = temperatures.map(() => false);
     renderTempCards();
-    setTempStatus(`Kunne ikkje hente token. ${String(err)}`);
+    setTempStatus(`${t("fetch_failed")} ${String(err)}`);
   }
 }
 
@@ -308,13 +395,13 @@ chartEl.addEventListener("keydown", (event) => {
 function setActive(nextActive) {
   isActive = nextActive;
   if (isActive) {
-    startBtn.textContent = "Stopp";
+    startBtn.textContent = t("btn_stop");
     promptEl.setAttribute("disabled", "true");
     predictBtn.setAttribute("disabled", "true");
     schedulePredict(true);
     chartEl.focus();
   } else {
-    startBtn.textContent = "Start";
+    startBtn.textContent = t("btn_start");
     promptEl.removeAttribute("disabled");
     predictBtn.removeAttribute("disabled");
     setStatus("");
@@ -324,11 +411,11 @@ function setActive(nextActive) {
 function setTempActive(nextActive) {
   tempActive = nextActive;
   if (tempActive) {
-    tempStartBtn.textContent = "Stopp";
+    tempStartBtn.textContent = t("btn_stop");
     tempPromptEl.setAttribute("disabled", "true");
     renderTempCards();
   } else {
-    tempStartBtn.textContent = "Start";
+    tempStartBtn.textContent = t("btn_start");
     tempPromptEl.removeAttribute("disabled");
     setTempStatus("");
   }
@@ -388,6 +475,16 @@ topPSlider.addEventListener("input", () => {
   topPValue.textContent = topP.toFixed(2);
 });
 
+langToggleBtn.addEventListener("click", () => {
+  currentLang = currentLang === "nn" ? "en" : "nn";
+  localStorage.setItem("lang", currentLang);
+  applyI18n();
+  renderTempCards();
+  if (tokensCache.length) {
+    render(tokensCache);
+  }
+});
+
 topPInfoBtn.addEventListener("click", () => {
   const isOpen = topPPop.classList.toggle("show");
   topPPop.setAttribute("aria-hidden", String(!isOpen));
@@ -428,6 +525,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+applyI18n();
 setView("token");
 renderTempCards();
 topPValue.textContent = topP.toFixed(2);
