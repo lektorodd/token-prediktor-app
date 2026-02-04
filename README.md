@@ -24,7 +24,7 @@ Tokenspå viser kva modellen trur kjem **neste**, og korleis **temperatur** endr
 ```
 OPENAI_API_KEY=din_nøkkel_her
 ```
-Denne fila blir ikkje committa til GitHub.
+Denne fila er lokal og blir ikkje brukt av appen utan at du lagar ho sjølv.
 
 ### Steg D: Start appen
 1. Installer avhengigheiter:
