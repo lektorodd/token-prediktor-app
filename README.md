@@ -1,5 +1,7 @@
 # Tokenspå 🔮
 
+![Forside](front-page.png)
+
 ## 1) Kva gjer appen?
 Tokenspå viser kva modellen trur kjem **neste**, og korleis **temperatur** endrar token‑vala.
 
