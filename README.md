@@ -29,7 +29,19 @@ Tokenspå viser kva modellen trur kjem **neste**, og korleis **temperatur** og s
 ```
 OPENAI_API_KEY=din_nøkkel_her
 ```
+Valfritt: vel modell (standard er `gpt-4.1-mini`). Modellen må støtte `logprobs`:
+```
+OPENAI_MODEL=gpt-4.1-mini
+# Berre for resonneringsmodellar som berre gir logprobs utan resonnering:
+# OPENAI_REASONING_EFFORT=none
+```
+Test kva modellar som fungerer med:
+```
+npm run check -- gpt-4.1-mini gpt-4o-mini
+```
 Denne fila er lokal og blir ikkje brukt av appen utan at du lagar ho sjølv. Del aldri API‑nøkkelen offentleg.
+
+> **Merk:** `gpt-3.5-turbo-instruct` og `/v1/completions` vart stengde i september 2026. Appen brukar no Chat Completions med `logprobs`. Chat‑modellar er instruerte til å berre halde fram teksten, så fordelinga liknar, men er ikkje heilt lik ein rein «base»-modell.
 
 ### Steg D: Start appen
 1. Installer avhengigheiter:
