@@ -41,7 +41,7 @@ npm run check -- gpt-4.1-mini gpt-4o-mini
 ```
 Denne fila er lokal og blir ikkje brukt av appen utan at du lagar ho sjølv. Del aldri API‑nøkkelen offentleg.
 
-> **Merk:** `gpt-3.5-turbo-instruct` og `/v1/completions` vart stengde i september 2026. Appen brukar no Chat Completions med `logprobs`. Chat‑modellar er instruerte til å berre halde fram teksten, så fordelinga liknar, men er ikkje heilt lik ein rein «base»-modell.
+> **Merk:** `gpt-3.5-turbo-instruct` og `/v1/completions` vart stengde i september 2026. Appen brukar no Chat Completions med `logprobs`. Chat‑modellar er instruerte til å først gjenta det siste ordet i teksten og så halde fram, slik at token med og utan mellomrom («␠så»/«så») og halve ord blir rette. Fordelinga liknar, men er ikkje heilt lik ein rein «base»-modell: chat‑modellar er ofte svært sikre (t.d. 97 % på eitt token), så temperatur og `top_p` gjer mindre utslag enn før. Set `top_p` til 1 for å sjå tydelegast effekt av temperatur.
 
 ### Steg D: Start appen
 1. Installer avhengigheiter:

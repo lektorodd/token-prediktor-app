@@ -1,54 +1,38 @@
-// Quick test: does the configured model return top_logprobs for the next token?
-// Usage: npm run check            (uses OPENAI_MODEL from .env)
-//        npm run check -- gpt-4.1-mini gpt-4o-mini   (test several models)
+// Quick test: does a model give sensible next-token probabilities?
+// Usage: npm run check                                  (uses OPENAI_MODEL from .env)
+//        npm run check -- gpt-4.1-mini gpt-4o-mini       (test several models)
 import "dotenv/config";
 
-const apiKey = process.env.OPENAI_API_KEY;
-if (!apiKey) {
+if (!process.env.OPENAI_API_KEY) {
   console.error("Missing OPENAI_API_KEY in .env");
   process.exit(1);
 }
 
 const models = process.argv.slice(2);
 if (!models.length) models.push(process.env.OPENAI_MODEL || "gpt-4.1-mini");
-const reasoningEffort = process.env.OPENAI_REASONING_EFFORT || "";
-const prompt = "Eg gjekk ut i hagen og";
 
-for (const model of models) {
-  const body = {
-    model,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are a raw text-continuation engine. Reply with ONLY the text that comes directly after the text between <text> and </text>.",
-      },
-      { role: "user", content: `<text>${prompt}</text>` },
-    ],
-    max_completion_tokens: 1,
-    temperature: 0,
-    logprobs: true,
-    top_logprobs: 5,
-  };
-  if (reasoningEffort) body.reasoning_effort = reasoningEffort;
+const prompts = ["Eg gjekk ut i hagen og", "Eg gjekk ut i hagen og ", "Eg gjekk ut i ha"];
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    console.log(`✗ ${model}: ${data?.error?.message ?? res.status}`);
-    continue;
+for (const name of models) {
+  process.env.OPENAI_MODEL = name;
+  // Fresh import so lib/openai.js picks up the model name.
+  const { predictNext, sampleNext } = await import(`./lib/openai.js?model=${name}`);
+  console.log(`\n${name}`);
+  try {
+    for (const prompt of prompts) {
+      const tokens = await predictNext(prompt, { topK: 5 });
+      const list = tokens
+        .map((t) => `${JSON.stringify(t.token)} ${(t.prob * 100).toFixed(1)}%`)
+        .join(", ");
+      console.log(`  ✓ ${JSON.stringify(prompt)} → ${list}`);
+    }
+    const sample = await sampleNext(prompts[0], { maxTokens: 3, temperature: 1 });
+    console.log(`  ✓ temperature 1, 3 tokens → ${JSON.stringify(sample)}`);
+  } catch (err) {
+    let msg = err.message;
+    try {
+      msg = JSON.parse(err.details).error.message;
+    } catch {}
+    console.log(`  ✗ ${msg}`);
   }
-  const top = data?.choices?.[0]?.logprobs?.content?.[0]?.top_logprobs;
-  if (!Array.isArray(top)) {
-    console.log(`✗ ${model}: no logprobs returned`);
-    continue;
-  }
-  const list = top
-    .map((t) => `${JSON.stringify(t.token)} ${(Math.exp(t.logprob) * 100).toFixed(1)}%`)
-    .join(", ");
-  console.log(`✓ ${model}: ${list}`);
 }
