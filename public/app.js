@@ -40,7 +40,7 @@ let tokensCache = [];
 let selectedIndex = 0;
 let isActive = false;
 let tempActive = false;
-let temperatures = [0.0, 0.4, 0.8, 1.2, 1.6];
+let temperatures = [0, 0, 1, 1, 2];
 let tempOutputs = temperatures.map(() => "");
 let tempLoading = temperatures.map(() => false);
 let topP = Number(topPSlider.value || 0.9);
