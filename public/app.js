@@ -35,14 +35,20 @@ const tempApplyBtn = document.querySelector("#temp-apply");
 
 let debounceId = null;
 let inflight = 0;
+let predicting = false;
 let tokensCache = [];
 let selectedIndex = 0;
 let isActive = false;
 let tempActive = false;
-let temperatures = [0.0, 0.4, 0.8, 1.2, 1.6];
+// Default fields for a demo. Above 2 the app simulates "volapyk" (gibberish).
+const DEFAULT_TEMPERATURES = [0, 0, 1, 1, 2, 5];
+const SIM_THRESHOLD = 2;
+let temperatures = [...DEFAULT_TEMPERATURES];
 let tempOutputs = temperatures.map(() => "");
+// The token(s) added in the latest step, highlighted briefly in each field.
+let tempLastAdded = temperatures.map(() => "");
 let tempLoading = temperatures.map(() => false);
-let topP = Number(topPSlider.value || 0.9);
+let topP = Number(topPSlider.value || 1);
 let topK = Number(topKSlider.value || 5);
 let stepTokens = Number(stepTokensSlider.value || 1);
 let currentLang = localStorage.getItem("lang") || "nn";
@@ -67,6 +73,9 @@ const i18n = {
     field_count: "Tal på felt",
     temp_header: "Ulike temperaturar",
     temp_label: "Temperatur",
+    sim_label: "simulert",
+    sim_help:
+      "Over 2 blir tilfeldige token frå heile ordforrådet blanda inn, slik ein gammal modell gjorde ved høg temperatur. Dette er ein simulering: desse tokena kjem ikkje frå modellen.",
     ready: "Klar",
     thinking: "Tenkjer",
     pending: "Klar for neste token.",
@@ -104,6 +113,9 @@ const i18n = {
     field_count: "Number of fields",
     temp_header: "Different temperatures",
     temp_label: "Temperature",
+    sim_label: "simulated",
+    sim_help:
+      "Above 2, random tokens from the whole vocabulary are mixed in, like an old model did at high temperature. This is a simulation: these tokens do not come from the model.",
     ready: "Ready",
     thinking: "Thinking",
     pending: "Ready for next token.",
@@ -176,27 +188,48 @@ function renderTempCards() {
     value.className = "temp-value";
     value.type = "number";
     value.min = "0";
-    value.max = "2";
-    value.step = "0.1";
-    value.value = Number(temp).toFixed(1);
+    value.max = "5";
+    value.step = "1";
+    value.value = String(temp);
     value.addEventListener("change", () => {
-      const next = Math.max(0, Math.min(2, Number(value.value || 0)));
-      temperatures[index] = Number(next.toFixed(2));
+      temperatures[index] = Math.max(0, Math.min(5, Math.round(Number(value.value || 0))));
       renderTempCards();
     });
     left.appendChild(label);
     left.appendChild(value);
+    if (temp > SIM_THRESHOLD) {
+      const sim = document.createElement("div");
+      sim.className = "temp-sim";
+      sim.textContent = t("sim_label");
+      sim.title = t("sim_help");
+      left.appendChild(sim);
+    }
 
     const output = document.createElement("div");
     output.className = "temp-output";
-    if (tempLoading[index]) {
-      output.classList.add("pending");
-      output.textContent = t("predicting");
-    } else if (!tempOutputs[index]) {
+    const text = tempOutputs[index];
+    if (!text && !tempLoading[index]) {
       output.classList.add("pending");
       output.textContent = t("pending");
     } else {
-      output.textContent = tempOutputs[index];
+      // Keep what is already predicted; only the new token is added at the end.
+      const added = tempLastAdded[index] || "";
+      output.appendChild(
+        document.createTextNode(text.slice(0, text.length - added.length))
+      );
+      if (added) {
+        const fresh = document.createElement("span");
+        fresh.className = "new-token";
+        fresh.textContent = added;
+        output.appendChild(fresh);
+      }
+      if (tempLoading[index]) {
+        const typing = document.createElement("span");
+        typing.className = "typing";
+        typing.setAttribute("aria-label", t("predicting"));
+        typing.innerHTML = "<span></span><span></span><span></span>";
+        output.appendChild(typing);
+      }
     }
 
     const state = document.createElement("div");
@@ -253,11 +286,7 @@ function render(tokens) {
     row.appendChild(pct);
     chartEl.appendChild(row);
 
-    row.addEventListener("click", () => {
-      promptEl.value += token.token;
-      promptEl.focus();
-      schedulePredict(true);
-    });
+    row.addEventListener("click", () => insertToken(token));
 
     row.addEventListener("mouseenter", () => {
       selectedIndex = index;
@@ -267,9 +296,7 @@ function render(tokens) {
     row.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        promptEl.value += token.token;
-        promptEl.focus();
-        schedulePredict(true);
+        insertToken(token);
       }
     });
   });
@@ -288,13 +315,17 @@ function updateSelection() {
   });
 }
 
-function acceptSelected() {
-  if (!tokensCache.length) return;
-  const token = tokensCache[selectedIndex];
-  if (!token) return;
+function insertToken(token) {
+  // Ignore clicks while a new prediction is loading (the list is stale).
+  if (!token || predicting) return;
   promptEl.value += token.token;
   promptEl.focus();
   schedulePredict(true);
+}
+
+function acceptSelected() {
+  if (!tokensCache.length) return;
+  insertToken(tokensCache[selectedIndex]);
 }
 
 function moveSelection(delta) {
@@ -312,6 +343,7 @@ async function predict() {
     return;
   }
   const requestId = ++inflight;
+  predicting = true;
   setStatus(t("predicting"));
   try {
     const res = await fetch("/api/predict", {
@@ -319,12 +351,12 @@ async function predict() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt,
-        top_p: topP,
         top_k: topK,
       }),
     });
     const data = await res.json();
     if (requestId !== inflight) return;
+    predicting = false;
     if (!res.ok) {
       setStatus(t("failed"));
       render([]);
@@ -334,6 +366,7 @@ async function predict() {
     setStatus("");
   } catch (err) {
     if (requestId !== inflight) return;
+    predicting = false;
     setStatus(t("failed"));
   }
 }
@@ -359,6 +392,7 @@ async function nextTempToken() {
   }
   setTempStatus(t("fetching"));
   tempLoading = temperatures.map(() => true);
+  tempLastAdded = temperatures.map(() => "");
   renderTempCards();
   try {
     const results = await Promise.all(
@@ -384,6 +418,7 @@ async function nextTempToken() {
     );
     results.forEach((token, index) => {
       tempOutputs[index] += token;
+      tempLastAdded[index] = token;
     });
     tempLoading = temperatures.map(() => false);
     renderTempCards();
@@ -395,7 +430,8 @@ async function nextTempToken() {
   }
 }
 
-predictBtn.addEventListener("click", () => schedulePredict(true));
+// Adds the selected token (by default the most likely one) and predicts again.
+predictBtn.addEventListener("click", () => acceptSelected());
 
 promptEl.addEventListener("input", (event) => {
   const isSpace =
@@ -429,13 +465,14 @@ function setActive(nextActive) {
   if (isActive) {
     startBtn.textContent = t("btn_stop");
     promptEl.setAttribute("disabled", "true");
-    predictBtn.setAttribute("disabled", "true");
+    predictBtn.removeAttribute("disabled");
     schedulePredict(true);
     chartEl.focus();
   } else {
     startBtn.textContent = t("btn_start");
     promptEl.removeAttribute("disabled");
-    predictBtn.removeAttribute("disabled");
+    predictBtn.setAttribute("disabled", "true");
+    predicting = false;
     setStatus("");
   }
 }
@@ -483,6 +520,7 @@ tempRestartBtn.addEventListener("click", () => {
   setTempActive(false);
   tempPromptEl.value = "";
   tempOutputs = temperatures.map(() => "");
+  tempLastAdded = temperatures.map(() => "");
   tempLoading = temperatures.map(() => false);
   renderTempCards();
 });
@@ -492,9 +530,10 @@ tempNextBtn.addEventListener("click", () => {
 });
 
 tempApplyBtn.addEventListener("click", () => {
-  const count = Math.max(2, Math.min(8, Number(tempCountEl.value || 5)));
-  temperatures = Array.from({ length: count }, () => 1.0);
+  const count = Math.max(2, Math.min(8, Number(tempCountEl.value || 6)));
+  temperatures = Array.from({ length: count }, (_, i) => DEFAULT_TEMPERATURES[i] ?? 1);
   tempOutputs = temperatures.map(() => "");
+  tempLastAdded = temperatures.map(() => "");
   tempLoading = temperatures.map(() => false);
   renderTempCards();
 });
