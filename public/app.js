@@ -40,7 +40,10 @@ let tokensCache = [];
 let selectedIndex = 0;
 let isActive = false;
 let tempActive = false;
-let temperatures = [0, 0, 1, 1, 2];
+// Default fields for a demo. Above 2 the app simulates "volapyk" (gibberish).
+const DEFAULT_TEMPERATURES = [0, 0, 1, 1, 2, 5];
+const SIM_THRESHOLD = 2;
+let temperatures = [...DEFAULT_TEMPERATURES];
 let tempOutputs = temperatures.map(() => "");
 // The token(s) added in the latest step, highlighted briefly in each field.
 let tempLastAdded = temperatures.map(() => "");
@@ -70,6 +73,9 @@ const i18n = {
     field_count: "Tal på felt",
     temp_header: "Ulike temperaturar",
     temp_label: "Temperatur",
+    sim_label: "simulert",
+    sim_help:
+      "Over 2 blir tilfeldige token frå heile ordforrådet blanda inn, slik ein gammal modell gjorde ved høg temperatur. Dette er ein simulering: desse tokena kjem ikkje frå modellen.",
     ready: "Klar",
     thinking: "Tenkjer",
     pending: "Klar for neste token.",
@@ -107,6 +113,9 @@ const i18n = {
     field_count: "Number of fields",
     temp_header: "Different temperatures",
     temp_label: "Temperature",
+    sim_label: "simulated",
+    sim_help:
+      "Above 2, random tokens from the whole vocabulary are mixed in, like an old model did at high temperature. This is a simulation: these tokens do not come from the model.",
     ready: "Ready",
     thinking: "Thinking",
     pending: "Ready for next token.",
@@ -180,15 +189,21 @@ function renderTempCards() {
     value.type = "number";
     value.min = "0";
     value.max = "5";
-    value.step = "0.1";
-    value.value = Number(temp).toFixed(1);
+    value.step = "1";
+    value.value = String(temp);
     value.addEventListener("change", () => {
-      const next = Math.max(0, Math.min(5, Number(value.value || 0)));
-      temperatures[index] = Number(next.toFixed(2));
+      temperatures[index] = Math.max(0, Math.min(5, Math.round(Number(value.value || 0))));
       renderTempCards();
     });
     left.appendChild(label);
     left.appendChild(value);
+    if (temp > SIM_THRESHOLD) {
+      const sim = document.createElement("div");
+      sim.className = "temp-sim";
+      sim.textContent = t("sim_label");
+      sim.title = t("sim_help");
+      left.appendChild(sim);
+    }
 
     const output = document.createElement("div");
     output.className = "temp-output";
@@ -515,8 +530,8 @@ tempNextBtn.addEventListener("click", () => {
 });
 
 tempApplyBtn.addEventListener("click", () => {
-  const count = Math.max(2, Math.min(8, Number(tempCountEl.value || 5)));
-  temperatures = Array.from({ length: count }, () => 1.0);
+  const count = Math.max(2, Math.min(8, Number(tempCountEl.value || 6)));
+  temperatures = Array.from({ length: count }, (_, i) => DEFAULT_TEMPERATURES[i] ?? 1);
   tempOutputs = temperatures.map(() => "");
   tempLastAdded = temperatures.map(() => "");
   tempLoading = temperatures.map(() => false);
