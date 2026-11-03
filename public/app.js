@@ -42,6 +42,8 @@ let isActive = false;
 let tempActive = false;
 let temperatures = [0, 0, 1, 1, 2];
 let tempOutputs = temperatures.map(() => "");
+// The token(s) added in the latest step, highlighted briefly in each field.
+let tempLastAdded = temperatures.map(() => "");
 let tempLoading = temperatures.map(() => false);
 let topP = Number(topPSlider.value || 0.9);
 let topK = Number(topKSlider.value || 5);
@@ -190,14 +192,29 @@ function renderTempCards() {
 
     const output = document.createElement("div");
     output.className = "temp-output";
-    if (tempLoading[index]) {
-      output.classList.add("pending");
-      output.textContent = t("predicting");
-    } else if (!tempOutputs[index]) {
+    const text = tempOutputs[index];
+    if (!text && !tempLoading[index]) {
       output.classList.add("pending");
       output.textContent = t("pending");
     } else {
-      output.textContent = tempOutputs[index];
+      // Keep what is already predicted; only the new token is added at the end.
+      const added = tempLastAdded[index] || "";
+      output.appendChild(
+        document.createTextNode(text.slice(0, text.length - added.length))
+      );
+      if (added) {
+        const fresh = document.createElement("span");
+        fresh.className = "new-token";
+        fresh.textContent = added;
+        output.appendChild(fresh);
+      }
+      if (tempLoading[index]) {
+        const typing = document.createElement("span");
+        typing.className = "typing";
+        typing.setAttribute("aria-label", t("predicting"));
+        typing.innerHTML = "<span></span><span></span><span></span>";
+        output.appendChild(typing);
+      }
     }
 
     const state = document.createElement("div");
@@ -360,6 +377,7 @@ async function nextTempToken() {
   }
   setTempStatus(t("fetching"));
   tempLoading = temperatures.map(() => true);
+  tempLastAdded = temperatures.map(() => "");
   renderTempCards();
   try {
     const results = await Promise.all(
@@ -385,6 +403,7 @@ async function nextTempToken() {
     );
     results.forEach((token, index) => {
       tempOutputs[index] += token;
+      tempLastAdded[index] = token;
     });
     tempLoading = temperatures.map(() => false);
     renderTempCards();
@@ -486,6 +505,7 @@ tempRestartBtn.addEventListener("click", () => {
   setTempActive(false);
   tempPromptEl.value = "";
   tempOutputs = temperatures.map(() => "");
+  tempLastAdded = temperatures.map(() => "");
   tempLoading = temperatures.map(() => false);
   renderTempCards();
 });
@@ -498,6 +518,7 @@ tempApplyBtn.addEventListener("click", () => {
   const count = Math.max(2, Math.min(8, Number(tempCountEl.value || 5)));
   temperatures = Array.from({ length: count }, () => 1.0);
   tempOutputs = temperatures.map(() => "");
+  tempLastAdded = temperatures.map(() => "");
   tempLoading = temperatures.map(() => false);
   renderTempCards();
 });
