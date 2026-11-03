@@ -58,8 +58,9 @@ app.post("/api/next", async (req, res) => {
 
     const token = await sampleNext(prompt, {
       maxTokens: Math.round(clampNumber(req.body?.max_tokens, 1, 1, 5)),
-      temperature: clampNumber(req.body?.temperature, 0, 0, 2),
-      topP: clampNumber(req.body?.top_p, 0.9, 0, 1),
+      // Sampling happens in lib/openai.js, so we are not bound by the API max of 2.
+      temperature: clampNumber(req.body?.temperature, 0, 0, 5),
+      topP: clampNumber(req.body?.top_p, 1, 0, 1),
     });
     res.json({ token });
   } catch (err) {

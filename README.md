@@ -43,7 +43,7 @@ Denne fila er lokal og blir ikkje brukt av appen utan at du lagar ho sjølv. Del
 
 > **Merk:** `gpt-3.5-turbo-instruct` og `/v1/completions` vart stengde i september 2026. Appen brukar no Chat Completions med `logprobs`. Chat‑modellar er instruerte til å først gjenta slutten av teksten (opptil 200 teikn) og så halde fram, slik at token med og utan mellomrom («␠så»/«så») og halve ord blir rette. Fordelinga liknar, men er ikkje heilt lik ein rein «base»-modell: chat‑modellar er ofte svært sikre (t.d. 97 % på eitt token), så temperatur og `top_p` gjer mindre utslag enn før. 
 >
-> **Temperatur blir no rekna ut i appen.** Chat‑modellane er ikkje heilt deterministiske, sjølv med temperatur 0. Difor hentar serveren dei 20 mest sannsynlege tokena (same liste som i token‑fana), tek vare på dei så lenge serveren køyrer, og trekkjer sjølv med temperatur og `top_p`. Temperatur 0 = alltid det mest sannsynlege tokenet, så like felt gir nøyaktig same tekst. Set `top_p` til 1 for å sjå tydelegast effekt av temperatur.
+> **Temperatur blir no rekna ut i appen.** Chat‑modellane er ikkje heilt deterministiske, sjølv med temperatur 0. Difor hentar serveren dei 20 mest sannsynlege tokena (same liste som i token‑fana), tek vare på dei så lenge serveren køyrer, og trekkjer sjølv med temperatur og `top_p`. Temperatur 0 = alltid det mest sannsynlege tokenet, så like felt gir nøyaktig same tekst. Sidan trekkinga skjer i appen, kan temperaturen gå heilt opp til 5 (API‑et stoppar på 2). Det trengst for å vise flat fordeling, fordi chat‑modellane er så sikre og vi berre har dei 20 beste tokena å trekke frå. `top_p` er no 1 som standard og verkar berre i temperatur‑fana.
 
 ### Steg D: Start appen
 1. Installer avhengigheiter:

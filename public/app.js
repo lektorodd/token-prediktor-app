@@ -45,7 +45,7 @@ let tempOutputs = temperatures.map(() => "");
 // The token(s) added in the latest step, highlighted briefly in each field.
 let tempLastAdded = temperatures.map(() => "");
 let tempLoading = temperatures.map(() => false);
-let topP = Number(topPSlider.value || 0.9);
+let topP = Number(topPSlider.value || 1);
 let topK = Number(topKSlider.value || 5);
 let stepTokens = Number(stepTokensSlider.value || 1);
 let currentLang = localStorage.getItem("lang") || "nn";
@@ -179,11 +179,11 @@ function renderTempCards() {
     value.className = "temp-value";
     value.type = "number";
     value.min = "0";
-    value.max = "2";
+    value.max = "5";
     value.step = "0.1";
     value.value = Number(temp).toFixed(1);
     value.addEventListener("change", () => {
-      const next = Math.max(0, Math.min(2, Number(value.value || 0)));
+      const next = Math.max(0, Math.min(5, Number(value.value || 0)));
       temperatures[index] = Number(next.toFixed(2));
       renderTempCards();
     });
