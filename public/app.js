@@ -35,6 +35,7 @@ const tempApplyBtn = document.querySelector("#temp-apply");
 
 let debounceId = null;
 let inflight = 0;
+let predicting = false;
 let tokensCache = [];
 let selectedIndex = 0;
 let isActive = false;
@@ -253,11 +254,7 @@ function render(tokens) {
     row.appendChild(pct);
     chartEl.appendChild(row);
 
-    row.addEventListener("click", () => {
-      promptEl.value += token.token;
-      promptEl.focus();
-      schedulePredict(true);
-    });
+    row.addEventListener("click", () => insertToken(token));
 
     row.addEventListener("mouseenter", () => {
       selectedIndex = index;
@@ -267,9 +264,7 @@ function render(tokens) {
     row.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        promptEl.value += token.token;
-        promptEl.focus();
-        schedulePredict(true);
+        insertToken(token);
       }
     });
   });
@@ -288,13 +283,17 @@ function updateSelection() {
   });
 }
 
-function acceptSelected() {
-  if (!tokensCache.length) return;
-  const token = tokensCache[selectedIndex];
-  if (!token) return;
+function insertToken(token) {
+  // Ignore clicks while a new prediction is loading (the list is stale).
+  if (!token || predicting) return;
   promptEl.value += token.token;
   promptEl.focus();
   schedulePredict(true);
+}
+
+function acceptSelected() {
+  if (!tokensCache.length) return;
+  insertToken(tokensCache[selectedIndex]);
 }
 
 function moveSelection(delta) {
@@ -312,6 +311,7 @@ async function predict() {
     return;
   }
   const requestId = ++inflight;
+  predicting = true;
   setStatus(t("predicting"));
   try {
     const res = await fetch("/api/predict", {
@@ -319,12 +319,12 @@ async function predict() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt,
-        top_p: topP,
         top_k: topK,
       }),
     });
     const data = await res.json();
     if (requestId !== inflight) return;
+    predicting = false;
     if (!res.ok) {
       setStatus(t("failed"));
       render([]);
@@ -334,6 +334,7 @@ async function predict() {
     setStatus("");
   } catch (err) {
     if (requestId !== inflight) return;
+    predicting = false;
     setStatus(t("failed"));
   }
 }
@@ -395,7 +396,8 @@ async function nextTempToken() {
   }
 }
 
-predictBtn.addEventListener("click", () => schedulePredict(true));
+// Adds the selected token (by default the most likely one) and predicts again.
+predictBtn.addEventListener("click", () => acceptSelected());
 
 promptEl.addEventListener("input", (event) => {
   const isSpace =
@@ -429,13 +431,14 @@ function setActive(nextActive) {
   if (isActive) {
     startBtn.textContent = t("btn_stop");
     promptEl.setAttribute("disabled", "true");
-    predictBtn.setAttribute("disabled", "true");
+    predictBtn.removeAttribute("disabled");
     schedulePredict(true);
     chartEl.focus();
   } else {
     startBtn.textContent = t("btn_start");
     promptEl.removeAttribute("disabled");
-    predictBtn.removeAttribute("disabled");
+    predictBtn.setAttribute("disabled", "true");
+    predicting = false;
     setStatus("");
   }
 }

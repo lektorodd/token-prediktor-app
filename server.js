@@ -38,7 +38,6 @@ app.post("/api/predict", async (req, res) => {
 
     const tokens = await predictNext(prompt, {
       topK: Math.round(clampNumber(req.body?.top_k, 5, 1, 20)),
-      topP: clampNumber(req.body?.top_p, 0.9, 0, 1),
     });
     res.json({ tokens });
   } catch (err) {
